@@ -1,5 +1,7 @@
 # edge-rewards-script
 
-This is a personal project to make a automatic microsoft rewards script.
+This is a personal project to make an automatic Microsoft rewards script.
 
-Currently on pause until I find more time to work on this.
+For personal use:
+- Install the edge drivers that match your current browser version
+- Make sure you're already signed into edge beforehand
