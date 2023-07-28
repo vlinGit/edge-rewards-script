@@ -1,8 +1,6 @@
 import pyautogui
 import random
 import time
-import keyboard
-import _thread
 
 points = 0
 cap = 200
