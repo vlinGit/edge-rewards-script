@@ -77,8 +77,14 @@ def specialQuiz():
             print("Submit button not found in specialQuiz, stopping quiz")
             break
 
+# returns false if quiz failed, true otherwise
 def abcQuiz():
-    progress = wqIsolateNumbers()
+    try:
+        progress = wqIsolateNumbers()
+    except:
+        print("Quitting abcQuiz")
+        return False
+
     curQuestion = progress[0]
     maxQuestion = progress[1]
     
@@ -95,6 +101,8 @@ def abcQuiz():
         else:
             print("Choice button not found in abcQuiz, stopping quiz")
             break
+        
+    return True
         
     
 def doDailySets():
@@ -121,7 +129,7 @@ def doDailySets():
             time.sleep(1)
             driver.switch_to.window(driver.window_handles[newWindow])
             
-            if 'warpspeed quiz' in text[1] or 'supersonic quiz' in text[1]:
+            if 'warpspeed quiz' in text[1] or 'supersonic quiz' in text[1] or 'turbocharge quiz' in text[1]:
                 specialQuiz()
             elif 'poll' in text[1]:
                 if not clickButton(By.ID, f'btoption{random.randint(0, 1)}'):
@@ -159,11 +167,9 @@ def getCap():
 
 # Searches using a random keyword
 def generateString(cap):
-    #pytrends = TrendReq(hl='en-US', tz=360)
     searches = []
 
     while len(searches) < cap/pointsPerSearch:
-        #suggestions = pytrends.suggestions(keyword=keywords[random.randint(0, len(keywords)-1)])
         suggestion = keywords[random.randint(0, len(keywords)-1)]
         if suggestion not in searches:
             searches.append(suggestion)
