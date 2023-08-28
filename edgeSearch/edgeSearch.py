@@ -10,22 +10,25 @@ import time
 import random
 import pyautogui
 
+#TODO: use chrome alongside with edge, pyautogui seems like a crude but easy solution
+phoneUserAgent = "Mozilla/5.0 (Linux; Android 13; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Mobile Safari/537.36 EdgA/113.0.1774.63"
 edgeOptions = Options()
 edgeOptions.add_argument('--log-level=3')
-edgeOptions.add_experimental_option("detach", True) 
+edgeOptions.add_experimental_option("detach", True)
 #edgeOptions.add_argument("auto-open-devtools-for-tabs")
-driver = webdriver.Edge(options=edgeOptions)
-driver.maximize_window()
+pcDriver = webdriver.Edge(options=edgeOptions)
+pcDriver.maximize_window()
+
 pcMaxPoints = 150
 mobileMaxPoints = 100
 pointsPerSearch = 5
 
-def login():
+def login(driver):
     driver.get('https://login.microsoftonline.com/')
 
 #TODO:
 #   Need a check for entertainment quiz (7 questions) <- this might be done, but will need to check once the quiz pops up in tasks
-def clickButton(method: By, path):
+def clickButton(driver, method: By, path):
     try:
         WebDriverWait(driver, 5).until(EC.element_to_be_clickable((method, path)))
         button = driver.find_element(method, path)
@@ -48,7 +51,7 @@ def rewardText(rawText):
 
 # Grabs '(x of 10)' and converts to [x, 10]
 def wqIsolateNumbers():
-    panes = driver.find_element(By.XPATH, '//*[@id="ListOfQuestionAndAnswerPanes"]')
+    panes = pcDriver.find_element(By.XPATH, '//*[@id="ListOfQuestionAndAnswerPanes"]')
     progress = panes.find_elements(By.CSS_SELECTOR, 'div')
     extract = progress[-1].get_attribute('innerText')[1:-1].split('of')
     numbers = [int(extract[0].strip()), int(extract[1].strip())]
@@ -58,15 +61,15 @@ def wqIsolateNumbers():
 # Warpspeed and supersonic quizzes
 def specialQuiz():
     try:
-        clickButton(By.XPATH, '//*[@id="rqStartQuiz"]')
+        clickButton(pcDriver, By.XPATH, '//*[@id="rqStartQuiz"]')
     except NoSuchElementException:
         print('Element not found, quiz was likely already started')
-    curPoints = int(driver.find_element(By.CLASS_NAME, 'rqECredits').get_attribute('innerText'))
-    maxPoints = int(driver.find_element(By.CLASS_NAME, 'rqMCredits').get_attribute('innerText'))
+    curPoints = int(pcDriver.find_element(By.CLASS_NAME, 'rqECredits').get_attribute('innerText'))
+    maxPoints = int(pcDriver.find_element(By.CLASS_NAME, 'rqMCredits').get_attribute('innerText'))
     option = 0
     while curPoints < maxPoints:
-        if clickButton(By.XPATH, f'//*[@id="rqAnswerOption{option}"]'):
-            newPoints = int(driver.find_element(By.CLASS_NAME, 'rqECredits').get_attribute('innerText'))
+        if clickButton(pcDriver, By.XPATH, f'//*[@id="rqAnswerOption{option}"]'):
+            newPoints = int(pcDriver.find_element(By.CLASS_NAME, 'rqECredits').get_attribute('innerText'))
             
             if curPoints != newPoints: 
                 option = 0
@@ -89,9 +92,9 @@ def abcQuiz():
     maxQuestion = progress[1]
     
     while curQuestion <= maxQuestion:
-        if clickButton(By.CLASS_NAME, 'wk_choicesInstLink'):
+        if clickButton(pcDriver, By.CLASS_NAME, 'wk_choicesInstLink'):
             time.sleep(2)
-            if clickButton(By.XPATH, f'//*[@id="nextQuestionbtn{curQuestion-1}"]') and curQuestion != maxQuestion:
+            if clickButton(pcDriver, By.XPATH, f'//*[@id="nextQuestionbtn{curQuestion-1}"]') and curQuestion != maxQuestion:
                 time.sleep(2)
                 updateProgress = wqIsolateNumbers()
                 curQuestion = updateProgress[0]
@@ -106,10 +109,10 @@ def abcQuiz():
         
     
 def doDailySets():
-    driver.get('https://rewards.bing.com/?signin=1')
-    daily = driver.find_elements(By.XPATH, "//*[@id='daily-sets']/mee-card-group[1]/div/mee-card")
-    driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-    extra = driver.find_elements(By.XPATH, '//*[@id="more-activities"]/div/mee-card')
+    pcDriver.get('https://rewards.bing.com/?signin=1')
+    daily = pcDriver.find_elements(By.XPATH, "//*[@id='daily-sets']/mee-card-group[1]/div/mee-card")
+    pcDriver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+    extra = pcDriver.find_elements(By.XPATH, '//*[@id="more-activities"]/div/mee-card')
     rewards = daily + extra
     newWindow = 1
     
@@ -127,25 +130,25 @@ def doDailySets():
         if taskClass == 'mee-icon mee-icon-AddMedium': # true if task has not been
             reward.click()
             time.sleep(1)
-            driver.switch_to.window(driver.window_handles[newWindow])
+            pcDriver.switch_to.window(pcDriver.window_handles[newWindow])
             
             if 'warpspeed quiz' in text[1] or 'supersonic quiz' in text[1] or 'turbocharge quiz' in text[1]:
                 specialQuiz()
             elif 'poll' in text[1]:
-                if not clickButton(By.ID, f'btoption{random.randint(0, 1)}'):
+                if not clickButton(pcDriver, By.ID, f'btoption{random.randint(0, 1)}'):
                     print("Poll button not found")
             elif 'test your smarts' in text[1] or 'show what you know' in text[1] or 'a, b, or c' in text[1] or 'quiz' in text[2]:
                 abcQuiz()
             
-            driver.switch_to.window(driver.window_handles[0]) 
+            pcDriver.switch_to.window(pcDriver.window_handles[0]) 
             newWindow += 1
         
 
 def getCap():
-    driver.get('https://rewards.bing.com/')
-    driver.find_element(By.XPATH, '//*[@id="dailypointColumnCalltoAction"]').click()
-    pcCap = pcMaxPoints - int(driver.find_element(By.XPATH, '//*[@id="userPointsBreakdown"]/div/div[2]/div/div[1]/div/div[2]/mee-rewards-user-points-details/div/div/div/div/p[2]').text.split("/")[0].strip())
-    mobileCap = mobileMaxPoints - int(driver.find_element(By.XPATH, '//*[@id="userPointsBreakdown"]/div/div[2]/div/div[2]/div/div[2]/mee-rewards-user-points-details/div/div/div/div/p[2]').text.split("/")[0].strip())
+    pcDriver.get('https://rewards.bing.com/')
+    pcDriver.find_element(By.XPATH, '//*[@id="dailypointColumnCalltoAction"]').click()
+    pcCap = pcMaxPoints - int(pcDriver.find_element(By.XPATH, '//*[@id="userPointsBreakdown"]/div/div[2]/div/div[1]/div/div[2]/mee-rewards-user-points-details/div/div/div/div/p[2]').text.split("/")[0].strip())
+    mobileCap = mobileMaxPoints - int(pcDriver.find_element(By.XPATH, '//*[@id="userPointsBreakdown"]/div/div[2]/div/div[2]/div/div[2]/mee-rewards-user-points-details/div/div/div/div/p[2]').text.split("/")[0].strip())
     
     print("Avaliable Points: ", pcCap, mobileCap)
     
@@ -176,7 +179,7 @@ def generateString(cap):
     
     return searches
 
-def searchLoop(cap=0):
+def searchLoop(driver, cap=0):
     searchBar = driver.find_element(By.ID, "sb_form_q")
     searches = generateString(cap)
 
@@ -187,34 +190,54 @@ def searchLoop(cap=0):
     searchCounter = 0
     while points < cap:
         searchBar = driver.find_element(By.ID, "sb_form_q")
-        while searchBar.get_attribute('value') != '':
+        
+        try:
             searchBar.clear()
-            time.sleep(0.2)  
-        searchBar.send_keys(searches[searchCounter])
-        searchBar.submit()
-        time.sleep(random.randint(1,3)/10)
+        except StaleElementReferenceException:
+            searchBar = driver.find_element(By.ID, "sb_form_q")
+            searchBar.clear()
+        time.sleep(0.2)
+        try: 
+            searchBar.send_keys(searches[searchCounter])
+            searchBar.submit()
+        except StaleElementReferenceException:
+            searchBar = driver.find_element(By.ID, "sb_form_q")
+            searchBar.send_keys(searches[searchCounter])
+            searchBar.submit()
+        
         points += pointsPerSearch # += 5
         searchCounter += 1
 
+# Menu button
+# //*[@id="mHamburger"] 
+# Signin button
+# //*[@id="hb_s"]
+def initMobile(mobileCap):
+    edgeOptions.add_argument(f'--user-agent={phoneUserAgent}')
+    phoneDriver = webdriver.Edge(options=edgeOptions)
+    login(phoneDriver)
+    phoneDriver.get('https://bing.com')
+    clickButton(phoneDriver, By.ID, 'mHamburger')
+    clickButton(phoneDriver, By.ID, 'hb_s')
+    searchLoop(phoneDriver, mobileCap)
+
 # hotkeys are for turning mobile mode on and off
-# done by enabling dev console and using device emulation
 def doSearch(pcCap, mobileCap):
-    searchLoop(pcCap)
-    pyautogui.hotkey('ctrl', 'shift', 'i')
-    time.sleep(1)
-    pyautogui.hotkey('ctrl', 'shift', 'm')
-    searchLoop(mobileCap)
-    pyautogui.hotkey('ctrl', 'shift', 'i')
-    driver.refresh()
-    
+    searchLoop(pcDriver, pcCap)
+    # pyautogui.hotkey('ctrl', 'shift', 'i')
+    # time.sleep(1)
+    # pyautogui.hotkey('ctrl', 'shift', 'm')
+    initMobile(mobileCap)
+
 if __name__ == "__main__":
+    login(pcDriver)
     doDailySets()
     
     pcAvailPoints, mobileAvailPoints = getCap()
     while pcAvailPoints != 0 or mobileAvailPoints != 0:
-        driver.get('https://bing.com')
+        pcDriver.get('https://bing.com')
         doSearch(pcAvailPoints, mobileAvailPoints)    
         pcAvailPoints, mobileAvailPoints = getCap()
         
-    driver.get('https://rewards.bing.com/')
-    driver.find_element(By.XPATH, '//*[@id="dailypointColumnCalltoAction"]').click()
+    pcDriver.get('https://rewards.bing.com/')
+    pcDriver.find_element(By.XPATH, '//*[@id="dailypointColumnCalltoAction"]').click()
